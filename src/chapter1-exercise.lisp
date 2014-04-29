@@ -1,15 +1,7 @@
 (in-package :cl-user)
 (defpackage cl-sicp.chapter1-exercise
-  (:use :cl)
-  (:import-from :cl-sicp.chapter1
-                :sum-of-squares
-                :improve
-                :average
-                :square
-                :primep
-                :fast-primep
-                :expmod
-                :sum))
+  (:use :cl
+        :cl-sicp.chapter1))
 (in-package :cl-sicp.chapter1-exercise)
 
 ;;; Exercise 1.2
@@ -37,7 +29,7 @@
 ;; Applicative-order evaluation.
 (defun new-if (predicate then-clause else-clause)
   (cond (predicate then-clause)
-        (t else-clause)))
+        (t         else-clause)))
 
 ;;; Exercise 1.7
 
@@ -86,7 +78,7 @@
   (cond ((= y 0) 0)
         ((= x 0) (* 2 y))
         ((= y 1) 2)
-        (t (A (- x 1) (A x (- y 1))))))
+        (t       (A (- x 1) (A x (- y 1))))))
 
 (defun f (n)
   (A 0 n))
@@ -104,9 +96,9 @@
 
 (defun ex111-1 (n)
   (cond ((< n 3) n)
-        (t (+      (ex111-1 (- n 1))
-              (* 2 (ex111-1 (- n 2)))
-              (* 3 (ex111-1 (- n 3)))))))
+        (t       (+      (ex111-1 (- n 1))
+                    (* 2 (ex111-1 (- n 2)))
+                    (* 3 (ex111-1 (- n 3)))))))
 
 (defun ex111-2 (n)
   (labels ((f-iter (a b c counter)
@@ -119,9 +111,9 @@
 
 (defun ex112 (row col)
   (cond ((or (> col row) (< col 0)) 0)
-        ((= col 1)       1)
-        ((+ (ex112 (1- row) (1- col))
-            (ex112 (1- row) col)))))
+        ((= col 1)                  1)
+        (t                          (+ (ex112 (1- row) (1- col))
+                                       (ex112 (1- row) col)))))
 
 ;;; Exercise 1.15
 
@@ -140,9 +132,9 @@
 
 (defun ex116 (b n)
   (labels ((f-iter (a b n)
-             (cond ((= n 0) a)
+             (cond ((= n 0)   a)
                    ((evenp n) (f-iter a (square b) (/ n 2)))
-                   (t (f-iter (* a b) b (1- n))))))
+                   (t         (f-iter (* a b) b (1- n))))))
     (f-iter 1 b n)))
 
 ;;; Exercise 1.17
@@ -159,17 +151,17 @@
   (/ n 2))
 
 (defun ex117 (a b)
-  (cond ((= b 0) 0)
+  (cond ((= b 0)   0)
         ((evenp b) (double (ex117 a (halve b))))
-        (t (+ a (ex117 a (1- b))))))
+        (t         (+ a (ex117 a (1- b))))))
 
 ;;; Exercise 1.18
 
 (defun ex118 (a b)
   (labels ((f-iter (x a b)
-             (cond ((= b 0) x)
+             (cond ((= b 0)   x)
                    ((evenp b) (f-iter x (double a) (halve b)))
-                   (t (f-iter (+ a x) a (1- b))))))
+                   (t         (f-iter (+ a x) a (1- b))))))
     (f-iter 0 a b)))
 
 ;;; Exercise 1.19
@@ -178,17 +170,17 @@
   (fib-iter 1 0 0 1 n))
 
 (defun fib-iter (a b p q count)
-  (cond ((= count 0) b)
+  (cond ((= count 0)   b)
         ((evenp count) (fib-iter a
                                  b
                                  (+ (square p) (square q))
                                  (+ (square q) (double (* p q)))
                                  (/ count 2)))
-        (t (fib-iter (+ (* b q) (* a q) (* a p))
-                     (+ (* b p) (* a q))
-                     p
-                     q
-                     (1- count)))))
+        (t             (fib-iter (+ (* b q) (* a q) (* a p))
+                                 (+ (* b p) (* a q))
+                                 p
+                                 q
+                                 (1- count)))))
 
 ;;; Exercise 1.22
 
@@ -219,8 +211,8 @@
 
 (defun find-divisor (n test-divisor)
   (cond ((> (square test-divisor) n) n)
-        ((divides test-divisor n) test-divisor)
-        (t (find-divisor n (next test-divisor)))))
+        ((divides test-divisor n)    test-divisor)
+        (t                           (find-divisor n (next test-divisor)))))
 
 (defun divides (a b)
   (= (rem b a) 0))
@@ -272,9 +264,9 @@
 
 (defun fermat-full (n)
   (labels ((f-iter (a)
-             (cond ((= a 1) t)
+             (cond ((= a 1)                 t)
                    ((not (fermat-test n a)) nil)
-                   (t (f-iter (1- a))))))
+                   (t                       (f-iter (1- a))))))
     (f-iter (1- n))))
 
 ;;; Exercise 1.28
@@ -286,10 +278,10 @@
       (rem (square x) m)))
 
 (defun expmod2 (base exp m)
-  (cond ((= exp 0) 1)
+  (cond ((= exp 0)   1)
         ((evenp exp) (square-check (expmod2 base (/ exp 2) m) m))
-        (t (rem (* base (expmod2 base (1- exp) m))
-                m))))
+        (t           (rem (* base (expmod2 base (1- exp) m))
+                          m))))
 
 (defun miller-rabin-test (n)
   (labels ((try-it (a)
@@ -297,9 +289,9 @@
     (try-it (+ 2 (random (- n 2))))))
 
 (defun fast-primep2 (n times)
-  (cond ((= times 0) t)
+  (cond ((= times 0)           t)
         ((miller-rabin-test n) (fast-primep2 n (1- times)))
-        (t nil)))
+        (t                     nil)))
 
 ;;; Exercise 1.29
 
@@ -308,8 +300,8 @@
     (labels ((term (k)
                (let ((y (funcall f (+ a (* k h)))))
                  (cond ((or (= k 0) (= k n)) y)
-                       ((evenp k) (* 2 y))
-                       (t (* 4 y))))))
+                       ((evenp k)            (* 2 y))
+                       (t                    (* 4 y))))))
       (* (sum #'term 0 #'1+ n)
          (/ h 3.0)))))
 
@@ -373,15 +365,15 @@
 
 (defun filtered-accumulate (combiner null-value term a next b filter)
   (cond
-    ((> a b) null-value)
+    ((> a b)            null-value)
     ((funcall filter a) (funcall combiner
                                  (funcall term a)
                                  (filtered-accumulate combiner null-value
                                                       term (funcall next a) next b
                                                       filter)))
-    (t (filtered-accumulate combiner null-value
-                            term (funcall next a) next b
-                            filter))))
+    (t                  (filtered-accumulate combiner null-value
+                                             term (funcall next a) next b
+                                             filter))))
 
 (defun sum-squares-prime (a b)
   (filtered-accumulate #'+ 0 #'square a #'1+ b #'primep))
@@ -391,3 +383,145 @@
              (= (gcd k n) 1)))
     (filtered-accumulate #'* 1 #'identity 1 #'1+ (1- n)
                          #'relatively-prime)))
+
+;;; Exercise 1.34
+
+(defun f2 (g)
+  (funcall g 2))
+
+;;; Exercise 1.35
+
+(defun golden-ratio ()
+  (fixed-point #'(lambda (x)
+                   (+ 1 (/ 1 x))) 1.0))
+
+;;; Exercise 1.36
+
+(defun fixed-point-print (f first-guess)
+  (labels ((close-enough (v1 v2)
+             (< (abs (- v1 v2)) *tolerance*))
+           (try (guess)
+             (fresh-line)
+             (format t "~a" guess)
+             (let ((next (funcall f guess)))
+               (if (close-enough guess next)
+                   next
+                   (try next)))))
+    (try first-guess)))
+
+(defun x-to-x ()
+  (fixed-point-print #'(lambda (x)
+                         (/ (log 1000) (log x))) 2.0))
+
+(defun x-to-x-average ()
+  (fixed-point-print #'(lambda (x)
+                         (average x (/ (log 1000) (log x)))) 2.0))
+
+;;; Exercise 1.37
+
+(defun cont-frac (n d k)
+  (labels ((frac (i)
+             (if (< i k)
+                 (/ (funcall n i) (+ (funcall d i) (frac (+ i 1))))
+                 (/ (funcall n i) (funcall d i)))))
+    (frac 1)))
+
+(defun cont-frac-iter (n d k)
+  (labels ((frac-iter (i result)
+             (if (= i 0)
+                 result
+                 (frac-iter (1- i)
+                            (/ (funcall n i) (+ (funcall d i) result))))))
+    (frac-iter (- k 1) (/ (funcall n k) (funcall d k)))))
+
+;;; Exercise 1.38
+
+(defun d (i)
+  (if (not (= 0 (rem (+ i 1) 3)))
+      1
+      (* 2 (/ (+ i 1) 3))))
+
+(defun e ()
+  (+ 2 (cont-frac #'(lambda (i) 1.0) #'d 10)))
+
+;;; Exercise 1.39
+
+(defun tan-cf (x k)
+  (labels ((n (k)
+             (if (= k 1)
+                 x
+                 (- (square x))))
+           (d (k)
+             (- (* 2 k) 1)))
+    (cont-frac #'n #'d k)))
+
+;;; Exercise 1.41
+
+;; (funcall (funcall (double-f (double-f #'double-f)) #'1+) 5)
+(defun double-f (f)
+  #'(lambda (x)
+      (funcall f (funcall f x))))
+
+;;; Exercise 1.42
+
+;; (funcall (compose #'square #'1+) 6)
+(defun compose (f g)
+  #'(lambda (x)
+      (funcall f (funcall g x))))
+
+;;; Exercise 1.43
+
+;; (funcall (repeated #'square 2) 5)
+(defun repeated (f n)
+  (if (= n 1)
+      f
+      (compose f (repeated f (1- n)))))
+
+;;; Exercise 1.44
+
+(defun average (&rest args)
+  (/ (apply #'+ args) (length args)))
+
+;; (funcall (smooth #'sin 0.7) (/ pi 2))
+(defun smooth (f dx)
+  #'(lambda (x)
+      (average (funcall f (- x dx))
+               (funcall f x)
+               (funcall f (+ x dx)))))
+
+;; (funcall (n-fold-smooth #'sin 0.7 2) (/ pi 2))
+(defun n-fold-smooth (f dx n)
+  (repeated (smooth f dx) n))
+
+;;; Exercise 1.45
+
+;;; (nth-root 8192 13)
+(defun nth-root (x n)
+  (fixed-point (funcall (repeated #'average-damp (floor (log n 2)))
+                        #'(lambda (y)
+                            (/ x (expt y (- n 1)))))
+               1.0))
+
+;;; Exercise 1.46
+
+(defun iter-improve (good-enough improve)
+  (labels ((iter (guess)
+             (if (funcall good-enough guess)
+                 guess
+                 (iter (funcall improve guess)))))
+    #'iter))
+
+(defun iter-improve-sqrt (x)
+  (funcall (iter-improve #'(lambda (guess)
+                             (< (abs (- (square guess) x)) 0.001))
+                         #'(lambda (guess)
+                             (average guess (/ x guess))))
+           1.0))
+
+;; (iter-improve-fixed-point #'(lambda (x) (+ 1 (/ 1 x))) 2.0)
+(defun iter-improve-fixed-point (f first-guess)
+  (funcall (iter-improve #'(lambda (guess)
+                             (< (abs (- (funcall f guess) guess)) 0.00001))
+                         #'(lambda (guess)
+                             (funcall f guess)))
+           first-guess))

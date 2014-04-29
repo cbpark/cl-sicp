@@ -9,10 +9,13 @@
            :fast-primep
            :expmod
            :cube
-           :sum))
+           :sum
+           :fixed-point
+           :*tolerance*
+           :average-damp))
 (in-package :cl-sicp.chapter1)
 
-;;; Building Abstractions with Procedures
+;;; Chapter 1. Building Abstractions with Procedures
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 1.1 The Elements of Programming
@@ -54,7 +57,7 @@
 
 (defun abs2 (x)
   (cond ((< x 0) (- x))
-        (t x)))
+        (t       x)))
 
 (defun abs3 (x)
   (if (< x 0)
@@ -144,8 +147,7 @@
 (defun fib1 (n)
   (cond ((= n 0) 0)
         ((= n 1) 1)
-        (t (+ (fib1 (- n 1))
-              (fib1 (- n 2))))))
+        (t       (+ (fib1 (- n 1)) (fib1 (- n 2))))))
 
 (defun fib2 (n)
   (fib-iter 1 0 n))
@@ -159,12 +161,15 @@
   (cc amount 5))
 
 (defun cc (amount kinds-of-coins)
-  (cond ((= amount 0) 1)
-        ((or (< amount 0) (= kinds-of-coins 0)) 0)
-        (t (+ (cc amount
-                  (- kinds-of-coins 1))
-              (cc (- amount (first-denomination kinds-of-coins))
-                  kinds-of-coins)))))
+  (cond ((= amount 0)
+         1)
+        ((or (< amount 0) (= kinds-of-coins 0))
+         0)
+        (t
+         (+ (cc amount
+                (- kinds-of-coins 1))
+            (cc (- amount (first-denomination kinds-of-coins))
+                kinds-of-coins)))))
 
 (defun first-denomination (kinds-of-coins)
   (cond ((= kinds-of-coins 1)  1)
@@ -191,9 +196,9 @@
       (expt-iter b (1- counter) (* b product))))
 
 (defun fast-expt (b n)
-  (cond ((= n 0) 1)
+  (cond ((= n 0)   1)
         ((evenp n) (square (fast-expt b (/ n 2))))
-        (t (* b (fast-expt b (1- n))))))
+        (t         (* b (fast-expt b (1- n))))))
 
 ;;; 1.2.5 Greatest Common Divisors
 
@@ -219,11 +224,9 @@
   (= n (smallest-divisor n)))
 
 (defun expmod (base exp m)
-  (cond ((= exp 0) 1)
-        ((evenp exp) (rem (square (expmod base (/ exp 2) m))
-                          m))
-        (t (rem (* base (expmod base (1- exp) m))
-                m))))
+  (cond ((= exp 0)   1)
+        ((evenp exp) (rem (square (expmod base (/ exp 2) m)) m))
+        (t           (rem (* base (expmod base (1- exp) m)) m))))
 
 (defun fermat-test (n)
   (labels ((try-it (a)
@@ -231,9 +234,9 @@
     (try-it (1+ (random (1- n))))))
 
 (defun fast-primep (n times)
-  (cond ((= times 0) t)
+  (cond ((= times 0)     t)
         ((fermat-test n) (fast-primep n (1- times)))
-        (t nil)))
+        (t               nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 1.3 Formulating Abstractions with Higher-Order Procedures
@@ -305,3 +308,112 @@
           #'(lambda (x) (+ x dx))
           b)
      dx))
+
+(defun f2 (x y)
+  (labels ((f-helper (a b)
+             (+ (* x (square a))
+                (* y b)
+                (* a b))))
+    (f-helper (+ 1 (* x y))
+              (- 1 y))))
+
+(defun f3 (x y)
+  ((lambda (a b)
+     (+ (* x (square a))
+        (* y b)
+        (* a b)))
+   (+ 1 (* x y))
+   (- 1 y)))
+
+(defun f4 (x y)
+  (let ((a (+ 1 (* x y)))
+        (b (- 1 y)))
+    (+ (* x (square a))
+       (* y b)
+       (* a b))))
+
+;;; 1.3.3 Procedures as General Methods
+
+(defun search-root (f neg-point pos-point)
+  (let ((midpoint (average neg-point pos-point)))
+    (if (close-enough neg-point pos-point)
+        midpoint
+        (let ((test-value (funcall f midpoint)))
+          (cond ((plusp test-value)  (search-root f neg-point midpoint))
+                ((minusp test-value) (search-root f midpoint pos-point))
+                (t                   midpoint))))))
+
+(defun close-enough (x y)
+  (< (abs (- x y)) 0.001))
+
+(defun half-interval-method (f a b)
+  (let ((a-value (funcall f a))
+        (b-value (funcall f b)))
+    (cond ((and (minusp a-value) (plusp b-value))
+           (search-root f a b))
+          ((and (minusp b-value) (plusp a-value))
+           (search-root f b a))
+          (t
+           (error "Values are not of opposite sign")))))
+
+(defparameter *tolerance* 0.00001)
+
+(defun fixed-point (f first-guess)
+  (labels ((close-enough (v1 v2)
+             (< (abs (- v1 v2)) *tolerance*))
+           (try (guess)
+             (let ((next (funcall f guess)))
+               (if (close-enough guess next)
+                   next
+                   (try next)))))
+    (try first-guess)))
+
+(defun fixed-point-sqrt (x)
+  (fixed-point #'(lambda (y)
+                   (average y (/ x y))) 1.0))
+
+;;; 1.3.4 Procedures as Returned Values
+
+(defun average-damp (f)
+  #'(lambda (x)
+      (average x (funcall f x))))
+
+(defun fixed-point-sqrt2 (x)
+  (fixed-point (average-damp #'(lambda (y)
+                                 (/ x y))) 1.0))
+
+(defun cube-root (x)
+  (fixed-point (average-damp #'(lambda (y)
+                                 (/ x (square y)))) 1.0))
+
+(defparameter *dx* 0.00001)
+
+(defun deriv (g)
+  #'(lambda (x)
+      (/ (- (funcall g (+ x *dx*)) (funcall g x)) *dx*)))
+
+(defun newton-transform (g)
+  #'(lambda (x)
+      (- x (/ (funcall g x) (funcall (deriv g) x)))))
+
+(defun newtons-method (g guess)
+  (fixed-point (newton-transform g) guess))
+
+(defun fixed-point-sqrt3 (x)
+  (newtons-method #'(lambda (y)
+                      (- (square y) x)) 1.0))
+
+(defun fixed-point-of-transform (g transform guess)
+  (fixed-point (funcall transform g) guess))
+
+(defun fixed-point-sqrt4 (x)
+  (fixed-point-of-transform #'(lambda (y)
+                                (/ x y))
+                            #'average-damp
+                            1.0))
+
+(defun fixed-point-sqrt5 (x)
+  (fixed-point-of-transform #'(lambda (y)
+                                (- (square y) x))
+                            #'newton-transform
+                            1.0))
