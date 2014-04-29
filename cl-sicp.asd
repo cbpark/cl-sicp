@@ -16,7 +16,7 @@
                          (:file "chapter2")
                          (:file "chapter2-exercise"
                                 :depends-on ("chapter2")))))
-  :description ""
+  :description "Codes from Structure and Interpretation of Computer Programs in Common Lisp"
   :long-description
   #.(with-open-file (stream (merge-pathnames
                              #p"README.md"
