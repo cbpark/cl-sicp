@@ -442,7 +442,9 @@
       (* 2 (/ (+ i 1) 3))))
 
 (defun e ()
-  (+ 2 (cont-frac #'(lambda (i) 1.0) #'d 10)))
+  (+ 2 (cont-frac #'(lambda (i)
+                      (declare (ignore i))
+                      1.0) #'d 10)))
 
 ;;; Exercise 1.39
 
