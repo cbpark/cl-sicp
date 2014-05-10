@@ -4,6 +4,7 @@
   (:export :sum-of-squares
            :improve
            :average
+           :fib
            :square
            :primep
            :fast-primep
@@ -144,10 +145,10 @@
 
 ;;; 1.2.2 Tree Recursion
 
-(defun fib1 (n)
+(defun fib (n)
   (cond ((= n 0) 0)
         ((= n 1) 1)
-        (t       (+ (fib1 (- n 1)) (fib1 (- n 2))))))
+        (t       (+ (fib (- n 1)) (fib (- n 2))))))
 
 (defun fib2 (n)
   (fib-iter 1 0 n))
@@ -161,15 +162,12 @@
   (cc amount 5))
 
 (defun cc (amount kinds-of-coins)
-  (cond ((= amount 0)
-         1)
-        ((or (< amount 0) (= kinds-of-coins 0))
-         0)
-        (t
-         (+ (cc amount
-                (- kinds-of-coins 1))
-            (cc (- amount (first-denomination kinds-of-coins))
-                kinds-of-coins)))))
+  (cond ((= amount 0) 1)
+        ((or (< amount 0) (= kinds-of-coins 0)) 0)
+        (t (+ (cc amount
+                  (- kinds-of-coins 1))
+              (cc (- amount (first-denomination kinds-of-coins))
+                  kinds-of-coins)))))
 
 (defun first-denomination (kinds-of-coins)
   (cond ((= kinds-of-coins 1)  1)

@@ -1,7 +1,8 @@
 (in-package :cl-user)
 (defpackage cl-sicp.chapter1-exercise
   (:use :cl
-        :cl-sicp.chapter1))
+        :cl-sicp.chapter1)
+  (:shadow :fib))
 (in-package :cl-sicp.chapter1-exercise)
 
 ;;; Exercise 1.2
