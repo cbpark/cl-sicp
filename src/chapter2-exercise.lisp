@@ -558,3 +558,301 @@
                    (and (not (attacks q (car board)))
                         (iter q (cdr board))))))
       (iter kth-queen other-queens))))
+
+;;; Exercise 2.54
+
+(defun my-equal (items1 items2)
+  (cond ((and (null items1) (null items2)) t)
+        ((or (null items1) (null items2)) nil)
+        ((and (consp items1) (consp items2))
+         (and (my-equal (car items1) (car items2))
+              (my-equal (cdr items1) (cdr items2))))
+        ((or (consp items1) (consp items2)) nil)
+        (t   (eq items1 items2))))
+
+;;; Exercise 2.56
+
+(defun deriv (exp var)
+  (cond
+    ((numberp exp) 0)
+    ((variablep exp) (if (same-variable exp var)
+                         1
+                         0))
+    ((sump exp) (make-sum (deriv (addend exp) var)
+                          (deriv (augend exp) var)))
+    ((productp exp) (make-sum (make-product (multiplier exp)
+                                            (deriv (multiplicand exp) var))
+                              (make-product (deriv (multiplier exp) var)
+                                            (multiplicand exp))))
+    ((exponentiationp exp) (make-product
+                            (make-product
+                             (exponent exp)
+                             (make-exponentiation (base exp)
+                                                  (1- (exponent exp))))
+                            (deriv (base exp) var)))
+    (t (error "unknown expression type: DERIV"))))
+
+(defun make-exponentiation (e1 e2)
+  (cond ((=numberp e2 0) 1)
+        ((=numberp e2 1) e1)
+        ((and (numberp e1) (numberp e2)) (expt e1 e2))
+        (t (list '** e1 e2))))
+
+(defun exponentiationp (x)
+  (and (consp x) (eq (car x) '**)))
+
+(defun base (x)
+  (cadr x))
+
+(defun exponent (x)
+  (caddr x))
+
+;;; Exercise 2.57
+
+(defun augend (s)
+  (if (null (cdddr s))
+      (caddr s)
+      (cons '+ (cddr s))))
+
+(defun multiplicand (p)
+  (if (null (cdddr p))
+      (caddr p)
+      (cons '* (cddr p))))
+
+;;; Exercise 2.58
+
+(defun sump-infix (x)
+  (and (consp x) (eq (cadr x) '+)))
+
+(defun productp-infix (x)
+  (and (consp x) (eq (cadr x) '*)))
+
+(defun make-sum-infix (a1 a2)
+  (cond ((=numberp a1 0) a2)
+        ((=numberp a2 0) a1)
+        ((and (numberp a1) (numberp a2)) (+ a1 a2))
+        (t (list a1 '+ a2))))
+
+(defun addend-infix (s)
+  (car s))
+
+(defun augend-infix (s)
+  ;; (caddr s)
+  (simplify (cddr s)))
+
+(defun make-product-infix (m1 m2)
+  (cond ((or (=numberp m1 0) (=numberp m2 0)) 0)
+        ((=numberp m1 1) m2)
+        ((=numberp m2 1) m1)
+        ((and (numberp m1) (numberp m2)) (* m1 m2))
+        (t (list m1 '* m2))))
+
+(defun multiplier-infix (p)
+  (car p))
+
+(defun multiplicand-infix (p)
+  ;; (caddr p)
+  (simplify (cddr p)))
+
+(defun simplify (exp)
+  (if (null (cdr exp))
+      (car exp)
+      exp))
+
+(defun deriv-infix (exp var)
+  (cond
+    ((numberp exp) 0)
+    ((variablep exp) (if (same-variable exp var)
+                         1
+                         0))
+    ((sump-infix exp) (make-sum-infix (deriv-infix (addend-infix exp) var)
+                                      (deriv-infix (augend-infix exp) var)))
+    ((productp-infix exp) (make-sum-infix
+                           (make-product-infix
+                            (multiplier-infix exp)
+                            (deriv-infix (multiplicand-infix exp) var))
+                           (make-product-infix
+                            (deriv-infix (multiplier-infix exp) var)
+                            (multiplicand-infix exp))))
+    (t (error "unknown expression type: DERIV-INFIX"))))
+
+;;; Exercise 2.59
+
+(defun union-of-set (set1 set2)
+  (cond
+    ((null set1) set2)
+    ((null set2) set1)
+    ((member (car set1) set2 :test #'equal) (union-of-set (cdr set1) set2))
+    (t (cons (car set1) (union-of-set (cdr set1) set2)))))
+
+;;; Exercise 2.60
+
+(defun adjoin-set-dup (x set)
+  (cons x set))
+
+(defun union-of-set-dup (set1 set2)
+  (append set1 set2))
+
+;;; Exercise 2.61
+
+(defun adjoin-set2 (x set)
+  (cond ((null set) (cons x '()))
+        ((= x (car set)) set)
+        ((< x (car set)) (cons x set))
+        ((> x (car set)) (cons (car set)
+                               (adjoin-set2 x (cdr set))))))
+
+;;; Exercise 2.62
+
+(defun union-set2 (set1 set2)
+  (cond ((null set1) set2)
+        ((null set2) set1)
+        ((= (car set1) (car set2)) (cons (car set1)
+                                         (union-set2 (cdr set1) (cdr set2))))
+        ((< (car set1) (car set2)) (cons (car set1)
+                                         (union-set2 (cdr set1) set2)))
+        (t (cons (car set2)
+                 (union-set2 set1 (cdr set2))))))
+
+;;; Exercise 2.63
+
+(defun left-branch-tree (tree)
+  (cadr tree))
+
+(defun right-branch-tree (tree)
+  (caddr tree))
+
+(defun tree->list-1 (tree)
+  (if (null tree)
+      '()
+      (append (tree->list-1 (left-branch-tree tree))
+              (cons (entry tree)
+                    (tree->list-1 (right-branch-tree tree))))))
+
+(defun tree->list-2 (tree)
+  (labels ((copy-to-list (tree result-list)
+             (if (null tree)
+                 result-list
+                 (copy-to-list (left-branch-tree tree)
+                               (cons (entry tree)
+                                     (copy-to-list (right-branch-tree tree)
+                                                   result-list))))))
+    (copy-to-list tree '())))
+
+;;; Exercise 2.64
+
+(defun list->tree (elements)
+  (car (partial-tree elements (length elements))))
+
+(defun partial-tree (elts n)
+  (if (= n 0)
+      (cons '() elts)
+      (let* ((left-size (floor (1- n) 2))
+             (left-result (partial-tree elts left-size))
+             (left-tree (car left-result))
+             (non-left-elts (cdr left-result))
+             (right-size (- n (1+ left-size)))
+             (this-entry (car non-left-elts))
+             (right-result (partial-tree (cdr non-left-elts)
+                                         right-size))
+             (right-tree (car right-result))
+             (remaining-elts (cdr right-result)))
+        (cons (make-tree this-entry left-tree right-tree)
+              remaining-elts))))
+
+;;; Exercise 2.65
+
+(defun union-set-tree (tree1 tree2)
+  (labels ((union-list (set1 set2)
+             (cond
+               ((null set1) set2)
+               ((null set2) set1)
+               ((= (car set1) (car set2)) (cons (car set1)
+                                                (union-list (cdr set1) (cdr set2))))
+               ((< (car set1) (car set2)) (cons (car set1)
+                                                (union-list (cdr set1) set2)))
+               (t (cons (car set2)
+                        (union-list set1 (cdr set2)))))))
+    (list->tree (union-list (tree->list-2 tree1)
+                            (tree->list-1 tree2)))))
+
+(defun intersection-set-tree (tree1 tree2)
+  (labels ((intersection-list (set1 set2)
+             (if (or (null set1) (null set2))
+                 '()
+                 (let ((x1 (car set1))
+                       (x2 (car set2)))
+                   (cond
+                     ((= x1 x2) (cons x1
+                                      (intersection-list (cdr set1) (cdr set2))))
+                     ((< x1 x2) (intersection-list (cdr set1) set2))
+                     ((> x1 x2) (intersection-list set1 (cdr set2))))))))
+    (list->tree (intersection-list (tree->list-2 tree1)
+                                   (tree->list-2 tree2)))))
+
+;;; Exercise 2.66
+
+(defun lookup (given-key set-of-records)
+  (cond
+    ((null set-of-records) nil)
+    ((= given-key (key (car set-of-records))) (car set-of-records))
+    ((< given-key (key (car set-of-records)))
+     (lookup given-key (left-branch-tree set-of-records)))
+    ((> given-key (key (car set-of-records)))
+     (lookup given-key (right-branch-tree set-of-records)))))
+
+;;; Exercise 2.67
+
+(defparameter *sample-tree* (make-code-tree
+                             (make-leaf 'A 4)
+                             (make-code-tree (make-leaf 'B 2)
+                                             (make-code-tree (make-leaf 'D 1)
+                                                             (make-leaf 'C 1)))))
+
+(defparameter *sample-message* '(0 1 1 0 0 1 0 1 0 1 1 1 0))
+
+;;; (decode *sample-message* *sample-tree*)
+
+;;; Exercise 2.68
+
+(defun encode (message tree)
+  (if (null message)
+      '()
+      (append (encode-symbol (car message) tree)
+              (encode (cdr message) tree))))
+
+(defun encode-symbol (symbol tree)
+  (cond
+    ((leafp tree) '())
+    ((member symbol (symbols (left-branch-code tree)))
+     (cons 0 (encode-symbol symbol (left-branch-code tree))))
+    ((member symbol (symbols (right-branch-code tree)))
+     (cons 1 (encode-symbol symbol (right-branch tree))))
+    (t (error "bad symbol: ENCODE-SYMBOL"))))
+
+;;; Exercise 2.69
+
+(defun generate-huffman-tree (pairs)
+  (successive-merge (make-leaf-set pairs)))
+
+(defun successive-merge (set)
+  (cond ((null set) '())
+        ((null (cdr set)) (car set))
+        (t (successive-merge
+            (adjoin-set-code (make-code-tree (car set) (cadr set))
+                             (cddr set))))))
+
+;;; Exercise 2.70
+
+(defparameter *song-tree* (generate-huffman-tree
+                           '((A 2) (BOOM 1) (GET 2) (JOB 2) (NA 16) (SHA 3)
+                             (YIP 9) (WAH 1))))
+
+(defparameter *encoded-song* (encode
+                              '(Get a job
+                                Sha na na na na na na na na
+                                Get a job
+                                Sha na na na na na na na na
+                                Wah yip yip yip yip yip yip yip yip yip
+                                Sha boom)
+                              *song-tree*))

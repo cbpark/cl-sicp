@@ -98,8 +98,8 @@
 (defun ex111-1 (n)
   (cond ((< n 3) n)
         (t       (+      (ex111-1 (- n 1))
-                    (* 2 (ex111-1 (- n 2)))
-                    (* 3 (ex111-1 (- n 3)))))))
+                         (* 2 (ex111-1 (- n 2)))
+                         (* 3 (ex111-1 (- n 3)))))))
 
 (defun ex111-2 (n)
   (labels ((f-iter (a b c counter)
@@ -117,9 +117,6 @@
                                        (ex112 (1- row) col)))))
 
 ;;; Exercise 1.15
-
-(defun cube (x)
-  (* x x x))
 
 (defun p (x)
   (- (* 3 x) (* 4 (cube x))))
@@ -482,15 +479,14 @@
 
 ;;; Exercise 1.44
 
-(defun average (&rest args)
-  (/ (apply #'+ args) (length args)))
-
 ;; (funcall (smooth #'sin 0.7) (/ pi 2))
 (defun smooth (f dx)
-  #'(lambda (x)
-      (average (funcall f (- x dx))
-               (funcall f x)
-               (funcall f (+ x dx)))))
+  (labels ((average (&rest args)
+             (/ (apply #'+ args) (length args))))
+    #'(lambda (x)
+        (average (funcall f (- x dx))
+                 (funcall f x)
+                 (funcall f (+ x dx))))))
 
 ;; (funcall (n-fold-smooth #'sin 0.7 2) (/ pi 2))
 (defun n-fold-smooth (f dx n)
