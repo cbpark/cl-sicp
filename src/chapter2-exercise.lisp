@@ -580,17 +580,18 @@
                          0))
     ((sump exp) (make-sum (deriv (addend exp) var)
                           (deriv (augend exp) var)))
-    ((productp exp) (make-sum (make-product (multiplier exp)
-                                            (deriv (multiplicand exp) var))
-                              (make-product (deriv (multiplier exp) var)
-                                            (multiplicand exp))))
-    ((exponentiationp exp) (make-product
-                            (make-product
-                             (exponent exp)
-                             (make-exponentiation (base exp)
-                                                  (1- (exponent exp))))
-                            (deriv (base exp) var)))
-    (t (error "unknown expression type: DERIV"))))
+    ((productp exp)
+     (make-sum (make-product (multiplier exp)
+                             (deriv (multiplicand exp) var))
+               (make-product (deriv (multiplier exp) var)
+                             (multiplicand exp))))
+    ((exponentiationp exp)
+     (make-product
+      (make-product (exponent exp)
+                    (make-exponentiation (base exp)
+                                         (make-sum (exponent exp) -1)))
+      (deriv (base exp) var)))
+    (t (error "unknown expression type: DERIV ~a" exp))))
 
 (defun make-exponentiation (e1 e2)
   (cond ((=numberp e2 0) 1)
@@ -856,3 +857,85 @@
                                 Wah yip yip yip yip yip yip yip yip yip
                                 Sha boom)
                               *song-tree*))
+
+;;; Exercise 2.73
+
+(defun deriv-op (exp var)
+  (cond ((numberp exp) 0)
+        ((variablep exp) (if (same-variable exp var)
+                             1
+                             0))
+        (t (funcall (get-proc 'deriv-op (operator exp)) (operands exp) var))))
+
+(defun operator (exp)
+  (car exp))
+
+(defun operands (exp)
+  (cdr exp))
+
+(defun install-deriv-sum ()
+  (labels ((deriv-sum (exp var)
+             (make-sum (deriv-op (car exp) var)
+                       (deriv-op (cadr exp) var))))
+    (put-proc 'deriv-op '+ #'deriv-sum)))
+
+(install-deriv-sum)
+
+(defun install-deriv-product ()
+  (labels ((deriv-product (exp var)
+             (make-sum (make-product (car exp)
+                                     (deriv-op (cadr exp) var))
+                       (make-product (deriv-op (car exp) var)
+                                     (cadr exp)))))
+    (put-proc 'deriv-op '* #'deriv-product)))
+
+(install-deriv-product)
+
+(defun install-deriv-exponent ()
+  (labels ((deriv-exponent (exp var)
+             (make-product
+              (make-product (cadr exp)
+                            (make-exponentiation (car exp)
+                                                 (make-sum (cadr exp) -1)))
+              (deriv-op (car exp) var))))
+    (put-proc 'deriv-op '** #'deriv-exponent)))
+
+(install-deriv-exponent)
+
+;;; Exercise 2.74
+
+(defun get-record (employ-name personnel-file)
+  (let ((record (funcall (get-proc 'record (type-tag personnel-file))
+                         employ-name (contents personnel-file))))
+    (if record
+        (attach-tag (type-tag personnel-file) record)
+        nil)))
+
+(defun get-salary (record)
+  (funcall (get-proc 'salary (type-tag record)) (contents record)))
+
+(defun get-address (record)
+  (funcall (get-proc 'address (type-tag record)) (contents record)))
+
+(defun find-employ-record (employ-name personnel-file)
+  (if (null personnel-file)
+      nil
+      (or (get-record employ-name (car personnel-file))
+          (find-employ-record employ-name (cdr personnel-file)))))
+
+;;; Exercise 2.75
+
+;; message passing style
+(defun make-from-mag-ang (r a)
+  (labels ((dispatch (op)
+             (cond
+               ((eq op 'magnitude) r)
+               ((eq op 'angle)     a)
+               ((eq op 'real-part) (* r (cos a)))
+               ((eq op 'imag-part) (* r (sin a)))
+               (t                  (error "Unknown op: MAKE-FROM-MAG-ANG ~a" op)))))
+    #'dispatch))
+
+;; Ex: (apply-generic 'magnitude (make-from-mag-ang 10 45))
+(defun apply-generic (op arg)
+  (funcall arg op))

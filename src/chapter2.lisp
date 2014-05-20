@@ -32,7 +32,12 @@
            :symbols
            :left-branch-code
            :right-branch-code
-           :adjoin-set-code))
+           :adjoin-set-code
+           :get-proc
+           :put-proc
+           :type-tag
+           :contents
+           :attach-tag))
 (in-package :cl-sicp.chapter2)
 
 ;;; Chapter 2. Building Abstractions with Data
@@ -95,7 +100,7 @@
   (labels ((dispatch (m)
              (cond ((= m 0) x)
                    ((= m 1) y)
-                   (t (error "Argument not 0 or 1: CONS")))))
+                   (t (error "Argument not 0 or 1: CONS ~a" m)))))
     #'dispatch))
 
 (defun my-car (z)
@@ -282,17 +287,17 @@
 
 (defun deriv (exp var)
   (cond
-    ((numberp exp) 0)
+    ((numberp exp)   0)
     ((variablep exp) (if (same-variable exp var)
                          1
                          0))
-    ((sump exp) (make-sum (deriv (addend exp) var)
-                          (deriv (augend exp) var)))
-    ((productp exp) (make-sum (make-product (multiplier exp)
-                                            (deriv (multiplicand exp) var))
-                              (make-product (deriv (multiplier exp) var)
-                                            (multiplicand exp))))
-    (t (error "unknown expression type: DERIV"))))
+    ((sump exp)      (make-sum (deriv (addend exp) var)
+                               (deriv (augend exp) var)))
+    ((productp exp)  (make-sum (make-product (multiplier exp)
+                                             (deriv (multiplicand exp) var))
+                               (make-product (deriv (multiplier exp) var)
+                                             (multiplicand exp))))
+    (t               (error "unknown expression type: DERIV ~a" exp))))
 
 (defun variablep (x)
   (symbolp x))
@@ -485,3 +490,245 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 2.4 Multiple Representation for Abstract Data
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; 2.4.1 Representations for Complex Numbers
+
+(defun add-complex (z1 z2)
+  (make-from-real-imag (+ (real-part z1) (real-part z2))
+                       (+ (imag-part z1) (imag-part z2))))
+
+(defun sub-complex (z1 z2)
+  (make-from-real-imag (- (real-part z1) (real-part z2))
+                       (- (imag-part z1) (imag-part z2))))
+
+(defun mul-complex (z1 z2)
+  (make-from-mag-ang (* (magnitude z1) (magnitude z2))
+                     (+ (angle z1) (angle z2))))
+
+(defun div-complex (z1 z2)
+  (make-from-mag-ang (/ (magnitude z1) (magnitude z2))
+                     (- (angle z1) (angle z2))))
+
+;;; 2.4.2 Tagged Data
+
+(defun attach-tag (type-tag contents)
+  (cons type-tag contents))
+
+(defun type-tag (datum)
+  (if (consp datum)
+      (car datum)
+      (error "Bad tagged datum: TYPE-TAG ~a" datum)))
+
+(defun contents (datum)
+  (if (consp datum)
+      (cdr datum)
+      (error "Bad tagged datum: CONTENTS ~a" datum)))
+
+(defun rectangularp (z)
+  (eq (type-tag z) 'rectangular))
+
+(defun polarp (z)
+  (eq (type-tag z) 'polar))
+
+(defun real-part-rectangular (z)
+  (car z))
+
+(defun imag-part-rectangular (z)
+  (cdr z))
+
+(defun magnitude-rectangular (z)
+  (sqrt (+ (square (real-part-rectangular z))
+           (square (imag-part-rectangular z)))))
+
+(defun angle-rectangular (z)
+  (atan (imag-part-rectangular z) (real-part-rectangular z)))
+
+(defun make-from-real-imag-rectangular (x y)
+  (attach-tag 'rectangular (cons x y)))
+
+(defun make-from-mag-ang-rectangular (r a)
+  (attach-tag 'rectangular (cons (* r (cos a)) (* r (sin a)))))
+
+(defun real-part-polar (z)
+  (* (magnitude-polar z) (cos (angle-polar z))))
+
+(defun imag-part-polar (z)
+  (* (magnitude-polar z) (sin (angle-polar z))))
+
+(defun magnitude-polar (z)
+  (car z))
+
+(defun angle-polar (z)
+  (cdr z))
+
+(defun make-from-real-imag-polar (x y)
+  (attach-tag 'polar (cons (sqrt (+ (square x) (square y)))
+                           (atan y x))))
+
+(defun make-from-mag-ang-polar (r a)
+  (attach-tag 'polar (cons r a)))
+
+;; (defun real-part (z)
+;;   (cond ((rectangularp z) (real-part-rectangular (contents z)))
+;;         ((polarp z)       (real-part-polar       (contents z)))
+;;         (t                (error "Unknown type: REAL-PART"))))
+
+;; (defun imag-part (z)
+;;   (cond ((rectangularp z) (imag-part-rectangular (contents z)))
+;;         ((polarp z)       (imag-part-polar       (contents z)))
+;;         (t                (error "Unknown type: IMAG-PART"))))
+
+;; (defun magnitude (z)
+;;   (cond ((rectangularp z) (magnitude-rectangular (contents z)))
+;;         ((polarp z)       (magnitude-polar       (contents z)))
+;;         (t                (error "Unknown type: MAGNITUDE"))))
+
+;; (defun angle (z)
+;;   (cond ((rectangularp z) (angle-rectangular (contents z)))
+;;         ((polarp z)       (angle-polar       (contents z)))
+;;         (t                (error "Unknown type: ANGLE"))))
+
+;; (defun make-from-real-imag (x y)
+;;   (make-from-real-imag-rectangular x y))
+
+;; (defun make-from-mag-ang (r a)
+;;   (make-from-mag-ang-polar r a))
+
+;;; 2.4.3 Data-Directed Programming and Additivity
+
+(defun make-table (&key (key-cmp #'eq))
+  (let ((local-table (list '*table*)))
+    (labels ((find-key-value (key table)
+               (assoc key table :test key-cmp))
+             (lookup (key-1 key-2)
+               (let ((subtable (find-key-value key-1 (cdr local-table))))
+                 (if subtable
+                     (let ((record (find-key-value key-2 (cdr subtable))))
+                       (if record
+                           (cdr record)
+                           nil))
+                     nil)))
+             (insert (key-1 key-2 value)
+               (let ((subtable (find-key-value key-1 (cdr local-table))))
+                 (if subtable
+                     (let ((record (find-key-value key-2 (cdr subtable))))
+                       (if record
+                           (setf (cdr record) value)
+                           (setf (cdr subtable) (cons (cons key-2 value)
+                                                      (cdr subtable)))))
+                     (setf (cdr local-table) (cons (list key-1 (cons key-2 value))
+                                                   (cdr local-table)))))
+               'ok)
+             (dispatch (m)
+               (cond ((eq m 'lookup-proc) #'lookup)
+                     ((eq m 'insert-proc) #'insert)
+                     (t (error "Unknown operation: TABLE")))))
+      #'dispatch)))
+
+(defparameter *operation-table* (make-table :key-cmp #'equal))
+
+(defun get-proc (op type)
+  (funcall (funcall *operation-table* 'lookup-proc) op type))
+
+(defun put-proc (op type item)
+  (funcall (funcall *operation-table* 'insert-proc) op type item))
+
+(defun install-rectangular-package ()
+  ;; internal procedures
+  (labels ((real-part (z)
+             (car z))
+           (imag-part (z)
+             (cdr z))
+           (make-from-real-imag (x y)
+             (cons x y))
+           (magnitude (z)
+             (sqrt (+ (square (real-part z))
+                      (square (imag-part z)))))
+           (angle (z)
+             (atan (imag-part z) (real-part z)))
+           (make-from-mag-ang (r a)
+             (cons (* r (cos a)) (* r (sin a))))
+
+           ;; interface to the rest of the system
+           (tag (x)
+             (attach-tag 'rectangular x)))
+    (put-proc 'real-part '(rectangular) #'real-part)
+    (put-proc 'imag-part '(rectangular) #'imag-part)
+    (put-proc 'magnitude '(rectangular) #'magnitude)
+    (put-proc 'angle     '(rectangular) #'angle)
+    (put-proc 'make-from-real-imag 'rectangular
+              #'(lambda (x y)
+                  (tag (make-from-real-imag x y))))
+    (put-proc 'make-from-mag-ang   'rectangular
+              #'(lambda (r a)
+                  (tag (make-from-mag-ang r a))))
+    'done))
+
+(install-rectangular-package)
+
+(defun install-polar-package ()
+  ;; internal procedures
+  (labels ((magnitude (z)
+             (car z))
+           (angle (z)
+             (cdr z))
+           (make-from-mag-ang (r a)
+             (cons r a))
+           (real-part (z)
+             (* (magnitude z) (cos (angle z))))
+           (imag-part (z)
+             (* (magnitude z) (sin (angle z))))
+           (make-from-real-imag (x y)
+             (cons (sqrt (+ (square x) (square y)))
+                   (atan y x)))
+
+           ;; interface to the rest of the system
+           (tag (x)
+             (attach-tag 'polar x)))
+    (put-proc 'real-part '(polar) #'real-part)
+    (put-proc 'imag-part '(polar) #'imag-part)
+    (put-proc 'magnitude '(polar) #'magnitude)
+    (put-proc 'angle     '(polar) #'angle)
+    (put-proc 'make-from-real-imag 'polar
+              #'(lambda (x y)
+                  (tag (make-from-real-imag x y))))
+    (put-proc 'make-from-mag-ang   'polar
+              #'(lambda (r a)
+                  (tag (make-from-mag-ang r a))))
+    'done))
+
+(install-polar-package)
+
+(defun apply-generic (op &rest args)
+  (let* ((type-tags (mapcar #'type-tag args))
+         (proc (get-proc op type-tags)))
+    (if proc
+        (apply proc (mapcar #'contents args))
+        (error "No method for these types: APPLY-GENERIC ~a"
+               (list op type-tags)))))
+
+(defun real-part (z)
+  (apply-generic 'real-part z))
+
+(defun imag-part (z)
+  (apply-generic 'imag-part z))
+
+(defun magnitude (z)
+  (apply-generic 'magnitude z))
+
+(defun angle (z)
+  (apply-generic 'angle z))
+
+;; Ex: (real-part (make-from-real-imag 1 2))
+(defun make-from-real-imag (x y)
+  (funcall (get-proc 'make-from-real-imag 'rectangular) x y))
+
+;; Ex: (magnitude (make-from-mag-ang 10 45))
+(defun make-from-mag-ang (r a)
+  (funcall (get-proc 'make-from-mag-ang 'polar) r a))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 2.5 Systems with Generic Operations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; 2.5.1 Generic Arithmetic Operations
