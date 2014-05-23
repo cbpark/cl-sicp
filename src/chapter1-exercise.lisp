@@ -1,8 +1,8 @@
 (in-package :cl-user)
 (defpackage cl-sicp.chapter1-exercise
+  (:shadowing-import-from :cl-sicp.chapter1 :fib)
   (:use :cl
-        :cl-sicp.chapter1)
-  (:shadow :fib))
+        :cl-sicp.chapter1))
 (in-package :cl-sicp.chapter1-exercise)
 
 ;;; Exercise 1.2

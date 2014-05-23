@@ -35,9 +35,12 @@
            :adjoin-set-code
            :get-proc
            :put-proc
+           :attach-tag
            :type-tag
            :contents
-           :attach-tag))
+           :get-coercion
+           :put-coercion
+           :drop))
 (in-package :cl-sicp.chapter2)
 
 ;;; Chapter 2. Building Abstractions with Data
@@ -511,18 +514,35 @@
 
 ;;; 2.4.2 Tagged Data
 
+;; (defun attach-tag (type-tag contents)
+;;   (cons type-tag contents))
+
+;; (defun type-tag (datum)
+;;   (if (consp datum)
+;;       (car datum)
+;;       (error "Bad tagged datum: TYPE-TAG ~a" datum)))
+
+;; (defun contents (datum)
+;;   (if (consp datum)
+;;       (cdr datum)
+;;       (error "Bad tagged datum: CONTENTS ~a" datum)))
+
+;;; Exercise 2.78
+
 (defun attach-tag (type-tag contents)
-  (cons type-tag contents))
+  (if (equal type-tag 'scheme-number)
+      contents
+      (cons type-tag contents)))
 
 (defun type-tag (datum)
-  (if (consp datum)
-      (car datum)
-      (error "Bad tagged datum: TYPE-TAG ~a" datum)))
+  (cond ((numberp datum) 'scheme-number)
+        ((consp datum)   (car datum))
+        (t               (error "Bad tagged datum: TYPE-TAG ~a" datum))))
 
 (defun contents (datum)
-  (if (consp datum)
-      (cdr datum)
-      (error "Bad tagged datum: CONTENTS ~a" datum)))
+  (cond ((numberp datum) datum)
+        ((consp datum)   (cdr datum))
+        (t               (error "Bad tagged datum: CONTENTS ~a" datum))))
 
 (defun rectangularp (z)
   (eq (type-tag z) 'rectangular))
@@ -732,3 +752,476 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; 2.5.1 Generic Arithmetic Operations
+
+(defun add (x y)
+  (apply-generic 'add x y))
+
+(defun sub (x y)
+  (apply-generic 'sub x y))
+
+(defun mul (x y)
+  (apply-generic 'mul x y))
+
+(defun div (x y)
+  (apply-generic 'div x y))
+
+(defun equ (x y)
+  (apply-generic 'equ x y))
+
+(defun =zerop (x)
+  (apply-generic '=zerop x))
+
+;; Exercise 2.83
+(defun raise (x)
+  (apply-generic 'raise x))
+
+;; Exercise 2.85
+(defun drop (x)
+  (let ((project-proc (get-proc 'project (type-tag x))))
+    (if project-proc
+        (let ((project-number (funcall project-proc (contents x))))
+          (if (equ project-number (raise project-number))
+              (drop project-number)
+              x))
+        x)))
+
+;; Exercise 2.86
+(defun sine (x)
+  (apply-generic 'sine x))
+
+(defun cosine (x)
+  (apply-generic 'cosine x))
+
+;; scheme-number: ordinary numbers
+(defun install-scheme-number-package ()
+  (labels ((tag (x)
+             (attach-tag 'scheme-number x)))
+    (put-proc 'add '(scheme-number scheme-number) #'(lambda (x y)
+                                                      (tag (+ x y))))
+    (put-proc 'sub '(scheme-number scheme-number) #'(lambda (x y)
+                                                      (tag (- x y))))
+    (put-proc 'mul '(scheme-number scheme-number) #'(lambda (x y)
+                                                      (tag (* x y))))
+    (put-proc 'div '(scheme-number scheme-number) #'(lambda (x y)
+                                                      (tag (/ x y))))
+    ;; Exercise 2.79
+    (put-proc 'equ '(scheme-number scheme-number) #'(lambda (x y)
+                                                      (= x y)))
+    ;; Exercise 2.80
+    (put-proc '=zerop '(scheme-number)            #'(lambda (x)
+                                                      (= x 0)))
+    ;; Exercise 2.83
+    (put-proc 'raise  '(scheme-number)            #'(lambda (x)
+                                                      (make-rational x 1)))
+    ;; Exercise 2.86
+    (put-proc 'sine   '(scheme-number)            #'(lambda (x)
+                                                      (tag (sin x))))
+    (put-proc 'cosine '(scheme-number)            #'(lambda (x)
+                                                      (tag (cos x))))
+    ;; Exercise 2.88
+    (put-proc 'negate '(scheme-number)            #'(lambda (x)
+                                                      (tag (- x))))
+    ;; Exercise 2.93
+    (put-proc 'greatest-common-divisor '(scheme-number scheme-number)
+              #'(lambda (x y)
+                  (gcd x y)))
+    (put-proc 'make 'scheme-number                #'(lambda (x)
+                                                      (tag x)))
+    'done))
+
+(install-scheme-number-package)
+
+(defun make-scheme-number (n)
+  (funcall (get-proc 'make 'scheme-number) n))
+
+(defun install-rational-package ()
+  ;; internal procedures
+  (labels ((numer (x)
+             (car x))
+           (denom (x)
+             (cdr x))
+           (make-rat (n d)
+             (let ((g (gcd n d)))
+               (cons (/ n g) (/ d g))))
+           (add-rat (x y)
+             (make-rat (+ (* (numer x) (denom y)) (* (numer y) (denom x)))
+                       (* (denom x) (denom y))))
+           (sub-rat (x y)
+             (make-rat (- (* (numer x) (denom y)) (* (numer y) (denom x)))
+                       (* (denom x) (denom y))))
+           (mul-rat (x y)
+             (make-rat (* (numer x) (numer y))
+                       (* (denom x) (denom y))))
+           (div-rat (x y)
+             (make-rat (* (numer x) (denom y))
+                       (* (denom x) (numer y))))
+           ;; Exercise 2.79
+           (equ-rat (x y)
+             (and (= (numer x) (numer y)) (= (denom x) (denom y))))
+           ;; Exercise 2.80
+           (=zerop-rat (x)
+             (= (numer x) 0))
+           ;; interface to rest of the system
+           (tag (x)
+             (attach-tag 'rational x)))
+    (put-proc 'add '(rational rational) #'(lambda (x y)
+                                            (tag (add-rat x y))))
+    (put-proc 'sub '(rational rational) #'(lambda (x y)
+                                            (tag (sub-rat x y))))
+    (put-proc 'mul '(rational rational) #'(lambda (x y)
+                                            (tag (mul-rat x y))))
+    (put-proc 'div '(rational rational) #'(lambda (x y)
+                                            (tag (div-rat x y))))
+    (put-proc 'equ '(rational rational) #'(lambda (x y)
+                                            (equ-rat x y)))
+    (put-proc '=zerop '(rational)       #'=zerop-rat)
+    ;; Exercise 2.83
+    (put-proc 'raise '(rational)        #'(lambda (x)
+                                            (make-real
+                                             (float (/ (numer x) (denom x))))))
+    ;; Exercise 2.85
+    (put-proc 'project '(rational)      #'(lambda (r)
+                                            (make-scheme-number
+                                             (round (/ (numer r) (denom r))))))
+    ;; Exercise 2.86
+    (put-proc 'sine    '(rational)      #'(lambda (r)
+                                            (tag (sin r))))
+    (put-proc 'cosine  '(rational)      #'(lambda (r)
+                                            (tag (cos r))))
+    ;; Exercise 2.88
+    (put-proc 'negate  '(rational)      #'(lambda (r)
+                                            (make-rational (- (numer r))
+                                                           (denom r))))
+    (put-proc 'make 'rational #'(lambda (n d)
+                                  (tag (make-rat n d))))
+    'done))
+
+(install-rational-package)
+
+(defun make-rational (n d)
+  (funcall (get-proc 'make 'rational) n d))
+
+;;; Exercise 2.83
+(defun install-real-package ()
+  (labels (
+           (tag (x)
+             (attach-tag 'real x)))
+    (put-proc 'add '(real real) #'(lambda (x y)
+                                    (tag (+ x y))))
+    (put-proc 'sub '(real real) #'(lambda (x y)
+                                    (tag (- x y))))
+    (put-proc 'mul '(real real) #'(lambda (x y)
+                                    (tag (* x y))))
+    (put-proc 'div '(real real) #'(lambda (x y)
+                                    (tag (/ x y))))
+    (put-proc 'equ '(real real) #'=)
+    (put-proc '=zerop '(real)   #'(lambda (x)
+                                    (= 0 x)))
+    (put-proc 'raise '(real)    #'(lambda (x)
+                                    (make-complex-from-real-imag x 0)))
+    ;; Exercise 2.85
+    (put-proc 'project '(real)  #'(lambda (x)
+                                    (let ((rat (rationalize x)))
+                                      (make-rational (numerator rat)
+                                                     (denominator rat)))))
+    ;; Exercise 2.86
+    (put-proc 'sine    '(real)      #'(lambda (x)
+                                        (tag (sin x))))
+    (put-proc 'cosine  '(real)      #'(lambda (x)
+                                        (tag (cos x))))
+    ;; Exercise 2.88
+    (put-proc 'negate  '(real)      #'(lambda (x)
+                                        (tag (- x))))
+    (put-proc 'make 'real #'(lambda (x)
+                              (if (realp x)
+                                  (tag x)
+                                  (error "Non-real value ~a" x))))
+    'done))
+
+(install-real-package)
+
+(defun make-real (n)
+  (funcall (get-proc 'make 'real) n))
+
+(defun install-complex-package ()
+  ;; imported procedures from rectangular and polar packages
+  (labels ((make-from-real-imag (x y)
+             (funcall (get-proc 'make-from-real-imag 'rectangular) x y))
+           (make-from-mag-ang (r a)
+             (funcall (get-proc 'make-from-mag-ang 'polar) r a))
+           ;; internal procedures
+           (add-complex (z1 z2)
+             (make-from-real-imag (add (real-part z1) (real-part z2))
+                                  (add (imag-part z1) (imag-part z2))))
+           (sub-complex (z1 z2)
+             (make-from-real-imag (sub (real-part z1) (real-part z2))
+                                  (sub (imag-part z1) (imag-part z2))))
+           (mul-complex (z1 z2)
+             (make-from-mag-ang (mul (magnitude z1) (magnitude z2))
+                                (add (angle z1) (angle z2))))
+           (div-complex (z1 z2)
+             (make-from-mag-ang (div (magnitude z1) (magnitude z2))
+                                (sub (angle z1) (angle z2))))
+           ;; Exercise 2.79
+           (equ-complex (z1 z2)
+             (and (= (real-part z1) (real-part z2)) (= (imag-part z1) (imag-part z2))))
+           ;; Exercise 2.80
+           (=zerop-complex (z)
+             (and (= (real-part z) 0) (= (imag-part z) 0)))
+           ;; interface to rest of the system
+           (tag (z)
+             (attach-tag 'complex z)))
+    ;; Exercise 2.77
+    (put-proc 'real-part '(complex) #'real-part)
+    (put-proc 'imag-part '(complex) #'imag-part)
+    (put-proc 'magnitude '(complex) #'magnitude)
+    (put-proc 'angle     '(complex) #'angle)
+    (put-proc 'add '(complex complex) #'(lambda (z1 z2)
+                                          (tag (add-complex z1 z2))))
+    (put-proc 'sub '(complex complex) #'(lambda (z1 z2)
+                                          (tag (sub-complex z1 z2))))
+    (put-proc 'mul '(complex complex) #'(lambda (z1 z2)
+                                          (tag (mul-complex z1 z2))))
+    (put-proc 'div '(complex complex) #'(lambda (z1 z2)
+                                          (tag (div-complex z1 z2))))
+    (put-proc 'equ '(complex complex) #'(lambda (z1 z2)
+                                          (equ-complex z1 z2)))
+    (put-proc '=zerop  '(complex)     #'(lambda (z)
+                                          (=zerop-complex z)))
+    ;; Exercise 2.85
+    (put-proc 'project '(complex)     #'(lambda (z)
+                                          (make-real (real-part z))))
+    ;; Exercise 2.88
+    (put-proc 'negate  '(complex)     #'(lambda (z)
+                                          (make-from-real-imag
+                                           (- (real-part z))
+                                           (- (imag-part z)))))
+    (put-proc 'make-from-real-imag 'complex #'(lambda (x y)
+                                                (tag (make-from-real-imag x y))))
+    (put-proc 'make-from-mag-ang 'complex #'(lambda (r a)
+                                              (tag (make-from-mag-ang r a))))
+    'done))
+
+(install-complex-package)
+
+(defun make-complex-from-real-imag (x y)
+  (funcall (get-proc 'make-from-real-imag 'complex) x y))
+
+(defun make-complex-from-mag-ang (r a)
+  (funcall (get-proc 'make-from-mag-ang 'complex) r a))
+
+;;; 2.5.2 Combining Data of Different Types
+
+(defparameter *coercion-table* (make-hash-table :test 'equal))
+
+(defun put-coercion (type-from type-to proc)
+  (setf (gethash (list type-from type-to) *coercion-table*) proc))
+
+(defun get-coercion (type-from type-to)
+  (gethash (list type-from type-to) *coercion-table*))
+
+(defun scheme-number->complex (n)
+  (make-complex-from-real-imag (contents n) 0))
+
+(put-coercion 'scheme-number 'complex #'scheme-number->complex)
+
+(defun apply-generic-coercion (op &rest args)
+  (let* ((type-tags (mapcar #'type-tag args))
+         (proc (get-proc op type-tags)))
+    (if proc
+        (apply proc (mapcar #'contents args))
+        (if (= (length args) 2)
+            (let* ((type1 (car type-tags))
+                   (type2 (cadr type-tags))
+                   (a1 (car args))
+                   (a2 (cadr args))
+                   (t1->t2 (get-coercion type1 type2))
+                   (t2->t1 (get-coercion type2 type1)))
+              (cond (t1->t2
+                     (apply-generic-coercion op (funcall t1->t2 a1) a2))
+                    (t2->t1
+                     (apply-generic-coercion op a1 (funcall t2->t1 a2)))
+                    (t
+                     (error "No method for these types ~a" (list op type-tags)))))
+            (error "No method for these types ~a" (list op type-tags))))))
+
+;;; 2.5.3 Example: Symbolic Algebra
+
+(defparameter *the-empty-termlist* '())
+
+(defun make-poly (var terms)
+  (funcall (get-proc 'make 'polynomial) var terms))
+
+(defun install-polynomial-package ()
+  ;; internal procedures
+  ;; representation of poly
+  (labels ((make-poly (var terms)
+             (cons var terms))
+           (variable-poly (p)
+             (car p))
+           (term-list (p)
+             (cdr p))
+           (same-variable (v1 v2)
+             (and (variablep v1) (variablep v2) (eq v1 v2)))
+           (variablep (x)
+             (symbolp x))
+           (add-poly (p1 p2)
+             (if (same-variable (variable-poly p1) (variable-poly p2))
+                 (make-poly (variable-poly p1)
+                            (add-terms (term-list p1) (term-list p2)))
+                 (error "Polys not in same var: ADD-POLY ~a" (list p1 p2))))
+           (mul-poly (p1 p2)
+             (if (same-variable (variable-poly p1) (variable-poly p2))
+                 (make-poly (variable-poly p1)
+                            (mul-terms (term-list p1) (term-list p2)))
+                 (error "Polys not in same var: MUL-POLY ~a" (list p1 p2))))
+           (add-terms (L1 L2)
+             (cond ((empty-termlist L1) L2)
+                   ((empty-termlist L2) L1)
+                   (t (let ((t1 (first-term L1))
+                            (t2 (first-term L2)))
+                        (cond ((> (order t1) (order t2))
+                               (adjoin-term t1 (add-terms (rest-terms L1) L2)))
+                              ((< (order t1) (order t2))
+                               (adjoin-term t2 (add-terms L1 (rest-terms L2))))
+                              (t
+                               (adjoin-term (make-term (order t1)
+                                                       (add (coeff t1) (coeff t2)))
+                                            (add-terms (rest-terms L1)
+                                                       (rest-terms L2)))))))))
+           (mul-terms (L1 L2)
+             (if (empty-termlist L1)
+                 *the-empty-termlist*
+                 (add-terms (mul-term-by-all-terms (first-term L1) L2)
+                            (mul-terms (rest-terms L1) L2))))
+           (mul-term-by-all-terms (t1 L)
+             (if (empty-termlist L)
+                 *the-empty-termlist*
+                 (let ((t2 (first-term L)))
+                   (adjoin-term (make-term (+ (order t1) (order t2))
+                                           (mul (coeff t1) (coeff t2)))
+                                (mul-term-by-all-terms t1 (rest-terms L))))))
+           ;; (adjoin-term (term term-list)
+           ;;   (if (=zerop (coeff term))
+           ;;       term-list
+           ;;       (cons term term-list)))
+           ;; (first-term (term-list)
+           ;;   (car term-list))
+
+           ;; Exercise 2.89
+           (adjoin-term (term term-list)
+             (let ((exponent (order term))
+                   (len (length term-list)))
+               (labels ((adjoin-iter (times terms)
+                          (cond ((=zerop (coeff term)) terms)
+                                ((= exponent times) (cons (coeff term) terms))
+                                (t (adjoin-iter (1+ times) (cons 0 terms))))))
+                 (adjoin-iter len term-list))))
+           (first-term (term-list)
+             (make-term (1- (length term-list)) (car term-list)))
+
+           (rest-terms (term-list)
+             (cdr term-list))
+           (empty-termlist (term-list)
+             (null term-list))
+           (make-term (order coeff)
+             (list order coeff))
+           (order (term)
+             (car term))
+           (coeff (term)
+             (cadr term))
+
+           ;; Exercise 2.87
+           (=zerop-poly (p)
+             (labels ((zero-term (terms)
+                        (or (empty-termlist terms)
+                            (and (=zerop (coeff (first-term terms)))
+                                 (zero-term (rest-terms terms))))))
+               (zero-term (term-list p))))
+
+           ;; Exercise 2.88
+           (negate-terms (terms)
+             (if (empty-termlist terms)
+                 *the-empty-termlist*
+                 (let ((t1 (first-term terms)))
+                   (adjoin-term (make-term (order t1) (negate (coeff t1)))
+                                (negate-terms (rest-terms terms))))))
+
+           ;; Exercise 2.91
+           (div-terms (L1 L2)
+             (if (empty-termlist L1)
+                 (list *the-empty-termlist* *the-empty-termlist*)
+                 (let ((t1 (first-term L1))
+                       (t2 (first-term L2)))
+                   (if (> (order t2) (order t1))
+                       (list *the-empty-termlist* L1)
+                       (let* ((new-c (div (coeff t1) (coeff t2)))
+                              (new-o (- (order t1) (order t2)))
+                              (rest-of-result
+                               (div-terms (add-terms
+                                           L1
+                                           (negate-terms
+                                            (mul-term-by-all-terms
+                                             (make-term new-o new-c) L2)))
+                                          L2)))
+                         (list (adjoin-term (make-term new-o new-c)
+                                            (car rest-of-result))
+                               (cadr rest-of-result)))))))
+           (div-poly (p1 p2)
+             (if (same-variable (variable-poly p1) (variable-poly p2))
+                 (let ((var (variable-poly p1))
+                       (result (div-terms (term-list p1) (term-list p2))))
+                   (list (make-poly var (car result))
+                         (make-poly var (cadr result))))))
+
+           ;; Exercise 2.93
+           (remainder-terms (L1 L2)
+             (cadr (div-terms L1 L2)))
+           (gcd-terms (L1 L2)
+             (if (empty-termlist L2)
+                 L1
+                 (gcd-terms L2 (remainder-terms L1 L2))))
+           (gcd-poly (p1 p2)
+             (if (same-variable (variable-poly p1) (variable-poly p2))
+                 (make-poly (variable-poly p1)
+                            (gcd-terms (term-list p1)
+                                       (term-list p2)))
+                 (error "Not the same variable")))
+
+           ;; interface to rest of the system
+           (tag (p)
+             (attach-tag 'polynomial p)))
+
+    (put-proc 'add '(polynomial polynomial) #'(lambda (p1 p2)
+                                                (tag (add-poly p1 p2))))
+    (put-proc 'sub '(polynomial polynomial) #'(lambda (p1 p2)
+                                                (tag (add-poly p1
+                                                               (negate p2)))))
+
+    (put-proc 'mul '(polynomial polynomial) #'(lambda (p1 p2)
+                                                (tag (mul-poly p1 p2))))
+    (put-proc 'div '(polynomial polynomial) #'(lambda (p1 p2)
+                                                (tag (div-poly p1 p2))))
+    (put-proc '=zerop '(polynomial)         #'=zerop-poly)
+    (put-proc 'negate '(polynomial)         #'(lambda (p)
+                                                (make-polynomial
+                                                 (variable-poly p)
+                                                 (negate-terms (term-list p)))))
+    (put-proc 'greatest-common-divisor '(polynomial polynomial)
+              #'(lambda (p1 p2) (tag (gcd-poly p1 p2))))
+    (put-proc 'make 'polynomial #'(lambda (var terms)
+                                    (tag (make-poly var terms))))
+    'done))
+
+(install-polynomial-package)
+
+(defun make-polynomial (var terms)
+  (funcall (get-proc 'make 'polynomial) var terms))
+
+;; Exercise 2.88
+(defun negate (x)
+  (apply-generic 'negate x))
+
+;; Exercise 2.93
+(defun greatest-common-divisor (x y)
+  (apply-generic 'greatest-common-divisor x y))

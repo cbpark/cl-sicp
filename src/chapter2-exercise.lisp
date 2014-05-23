@@ -939,3 +939,124 @@
 ;; Ex: (apply-generic 'magnitude (make-from-mag-ang 10 45))
 (defun apply-generic (op arg)
   (funcall arg op))
+
+;;; Exercise 2.77 - 2.80
+;;; See chapter2.lisp
+
+;;; Exercise 2.81
+
+(defun apply-generic-coercion (op &rest args)
+  (let* ((type-tags (mapcar #'type-tag args))
+         (proc (get-proc op type-tags)))
+    (if proc
+        (apply proc (mapcar #'contents args))
+        (if (= (length args) 2)
+            (let* ((type1 (car type-tags))
+                   (type2 (cadr type-tags))
+                   (a1 (car args))
+                   (a2 (cadr args)))
+              (if (equal type1 type2)
+                  (error "No method for these types ~a" (list op type-tags))
+                  (let ((t1->t2 (get-coercion type1 type2))
+                        (t2->t1 (get-coercion type2 type1)))
+                    (cond (t1->t2
+                           (apply-generic-coercion op (funcall t1->t2 a1) a2))
+                          (t2->t1
+                           (apply-generic-coercion op a1 (funcall t2->t1 a2)))
+                          (t (error "No method for these types ~a"
+                                    (list op type-tags)))))))
+            (error "No method for these types ~a" (list op type-tags))))))
+
+;;; Exercise 2.82
+
+(defun apply-generic-coercion-general (op &rest args)
+  (labels ((can-coerced-into (types target-type)
+             (and (mapcar #'(lambda (type)
+                              (or (equal type target-type)
+                                  (get-coercion type target-type)))
+                          types)))
+           (find-coerced-type (types)
+             (or (mapcar #'(lambda (target-type)
+                             (if (can-coerced-into types target-type)
+                                 target-type
+                                 nil))
+                         types)))
+           (coerce-to (target-type)
+             (mapcar #'(lambda (arg)
+                         (let ((arg-type (type-tag arg)))
+                           (if (equal arg-type target-type)
+                               arg
+                               (funcall (get-coercion arg-type target-type) arg))))
+                     args)))
+    (let* ((type-tags (mapcar #'type-tag args))
+           (proc (get-proc op type-tags)))
+      (if proc
+          (apply proc (mapcar #'contents args))
+          (let ((target-type (find-coerced-type type-tags)))
+            (if target-type
+                (apply-generic-coercion-general op (coerce-to target-type))
+                (error "No method for these types: APPLY-GENERIC-COERCION-GENERAL ~a"
+                       (list op type-tags))))))))
+
+;;; Exercise 2.83
+;;; See chapter2.lisp
+
+;;; Exercise 2.84
+
+(defun apply-generic-raise (op &rest args)
+  (labels ((raise-to (source target)
+             (let* ((source-type (type-tag source))
+                    (target-type (type-tag target))
+                    (raise-proc (get-proc 'raise (list source-type))))
+               (cond
+                 ((equal source-type target-type) source)
+                 (raise-proc (raise-to (funcall raise-proc (contents source))
+                                       target))
+                 (t nil)))))
+    (let* ((type-tags (mapcar #'type-tag args))
+           (proc (get-proc op type-tags)))
+      (if proc
+          (apply proc (mapcar #'contents args))
+          (if (= (length args) 2)
+              (let* ((a1 (car args))
+                     (a2 (cadr args))
+                     (raise1 (raise-to a1 a2))
+                     (raise2 (raise-to a2 a1)))
+                (cond (raise1 (apply-generic-raise op raise1 a2))
+                      (raise2 (apply-generic-raise op a1 raise2))
+                      (t (error "No method for these types: APPLY-GENERIC-RAISE ~a"
+                                (list op type-tags)))))
+              (error "No method for these types: APPLY-GENERIC-RAISE ~a"
+                     (list op type-tags)))))))
+
+;;; Exercise 2.85
+;;; See also chapter2.lisp
+
+(defun apply-generic-drop (op &rest args)
+  (labels ((raise-to (source target)
+             (let* ((source-type (type-tag source))
+                    (target-type (type-tag target))
+                    (raise-proc (get-proc 'raise (list source-type))))
+               (cond
+                 ((equal source-type target-type) source)
+                 (raise-proc (raise-to (funcall raise-proc (contents source))
+                                       target))
+                 (t nil)))))
+    (let* ((type-tags (mapcar #'type-tag args))
+           (proc (get-proc op type-tags)))
+      (if proc
+          (drop (apply proc (mapcar #'contents args)))
+          (if (= (length args) 2)
+              (let* ((a1 (car args))
+                     (a2 (cadr args))
+                     (raise1 (raise-to a1 a2))
+                     (raise2 (raise-to a2 a1)))
+                (cond (raise1 (apply-generic-raise op raise1 a2))
+                      (raise2 (apply-generic-raise op a1 raise2))
+                      (t (error "No method for these types: APPLY-GENERIC-RAISE ~a"
+                                (list op type-tags)))))
+              (error "No method for these types: APPLY-GENERIC-RAISE ~a"
+                     (list op type-tags)))))))
+
+;;; Exercise 2.87 - 2.89, 2.91, 2.93
+;;; See chapter2.lisp
