@@ -16,11 +16,10 @@
                          (:file "chapter2"
                                 :depends-on ("chapter1"))
                          (:file "chapter2-exercise"
-                                :depends-on ("chapter1"
-                                             "chapter2"))
+                                :depends-on ("chapter1" "chapter2"))
                          (:file "chapter3")
                          (:file "chapter3-exercise"
-                                :depends-on ("chapter3")))))
+                                :depends-on ("chapter1" "chapter3")))))
   :description "Codes from Structure and Interpretation of Computer Programs in Common Lisp"
   :long-description
   #.(with-open-file (stream (merge-pathnames
