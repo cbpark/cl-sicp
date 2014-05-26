@@ -1,7 +1,8 @@
 (in-package :cl-user)
 (defpackage cl-sicp.chapter3
   (:use :cl)
-  (:export :monte-carlo))
+  (:export :monte-carlo
+           :square))
 (in-package :cl-sicp.chapter3)
 
 ;;; Chapter 3. Modularity, Objects, and State
@@ -115,4 +116,25 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 3.2 The Environment Model of Evaluation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; 3.2.1 The Rules for Evaluation
+
+;;; 3.2.2 Applying Simple Procedures
+
+(defun square (x)
+  (* x x))
+
+(defun sum-of-squares (x y)
+  (+ (square x) (square y)))
+
+(defun f (a)
+  (sum-of-squares (+ a 1) (* a 2)))
+
+;;; 3.2.3 Frames as the Repository of Local State
+
+;;; 3.2.4 Internal Definitions
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 3.3 Modeling with Mutable Data
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

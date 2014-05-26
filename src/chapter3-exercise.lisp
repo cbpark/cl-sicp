@@ -1,9 +1,7 @@
 (in-package :cl-user)
 (defpackage cl-sicp.chapter3-exercise
   (:use :cl
-        :cl-sicp.chapter3)
-  (:import-from :cl-sicp.chapter1
-                :square))
+        :cl-sicp.chapter3))
 (in-package :cl-sicp.chapter3-exercise)
 
 ;;; Exercise 3.1
@@ -46,16 +44,15 @@
                (declare (ignore x))
                "Call the cops!")
              (dispatch (p m)
-               (cond
-                 ((not (eq p password)) (if (> count 7)
-                                            #'call-the-cops
-                                            #'(lambda (x)
-                                                (declare (ignore x))
-                                                (setf count (1+ count))
-                                                "Incorrect password")))
-                 ((eq m 'withdraw) #'withdraw)
-                 ((eq m 'deposit) #'deposit)
-                 (t (error "Unknown request: MAKE-ACCOUNT ~a" m)))))
+               (cond ((not (eq p password)) (if (> count 7)
+                                                #'call-the-cops
+                                                #'(lambda (x)
+                                                    (declare (ignore x))
+                                                    (setf count (1+ count))
+                                                    "Incorrect password")))
+                     ((eq m 'withdraw) #'withdraw)
+                     ((eq m 'deposit) #'deposit)
+                     (t (error "Unknown request: MAKE-ACCOUNT ~a" m)))))
       #'dispatch)))
 
 (defparameter *acc* (make-account 100 'secret-password))
@@ -118,11 +115,10 @@
                #'dispatch)
              (dispatch (p m)
                (if (member p password-list :test #'equal)
-                   (cond
-                     ((eq m 'withdraw) #'withdraw)
-                     ((eq m 'deposit) #'deposit)
-                     ((eq m 'make-joint) #'make-joint)
-                     (t (error "Unknown request: MAKE-ACCOUNT2 ~a" m)))
+                   (cond ((eq m 'withdraw) #'withdraw)
+                         ((eq m 'deposit) #'deposit)
+                         ((eq m 'make-joint) #'make-joint)
+                         (t (error "Unknown request: MAKE-ACCOUNT2 ~a" m)))
                    #'(lambda (x)
                        (declare (ignore x))
                        "Incorrect password"))))
@@ -140,3 +136,16 @@
                                  (setf state (+ x state))
                                  old-state)))
                       #'switch-state)))
+
+;;; Exercise 3.10
+
+(defun make-withdraw (initial-amount)
+  (let ((balance initial-amount))
+    #'(lambda (amount)
+        (if (>= balance amount)
+            (progn (setf balance (- balance amount))
+                   balance)
+            "Insufficient funds"))))
+
+(defparameter *W1* (make-withdraw 100))
+(defparameter *W2* (make-withdraw 100))
