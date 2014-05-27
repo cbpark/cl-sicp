@@ -59,22 +59,6 @@
 (defun rect-area (r)
   (* (rect-width r) (rect-height r)))
 
-;;; Exercise 2.4
-
-(defun my-cons (x y)
-  #'(lambda (m)
-      (funcall m x y)))
-
-(defun my-car (z)
-  (funcall z #'(lambda (p q)
-                 (declare (ignore q))
-                 p)))
-
-(defun my-cdr (z)
-  (funcall z #'(lambda (p q)
-                 (declare (ignore p))
-                 q)))
-
 ;;; Exercise 2.5
 
 (defun my-cons2 (a b)

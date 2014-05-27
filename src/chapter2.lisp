@@ -99,19 +99,6 @@
 
 ;;; 2.1.3 What Is Meant by Data?
 
-(defun my-cons (x y)
-  (labels ((dispatch (m)
-             (cond ((= m 0) x)
-                   ((= m 1) y)
-                   (t (error "Argument not 0 or 1: CONS ~a" m)))))
-    #'dispatch))
-
-(defun my-car (z)
-  (funcall z 0))
-
-(defun my-cdr (z)
-  (funcall z 1))
-
 ;;; 2.1.4 Extended Exercise: Interval Arithmetic
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -283,8 +270,8 @@
 
 (defun memq (item x)
   (cond ((null x) nil)
-        ((eq item (car x)) x)
-        (t        (memq item (cdr x)))))
+        ((equal item (car x)) x)
+        (t                    (memq item (cdr x)))))
 
 ;;; 2.3.2 Example: Symbolic Differentiation
 
@@ -903,8 +890,7 @@
 
 ;;; Exercise 2.83
 (defun install-real-package ()
-  (labels (
-           (tag (x)
+  (labels ((tag (x)
              (attach-tag 'real x)))
     (put-proc 'add '(real real) #'(lambda (x y)
                                     (tag (+ x y))))

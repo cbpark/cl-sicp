@@ -149,3 +149,73 @@
 
 (defparameter *W1* (make-withdraw 100))
 (defparameter *W2* (make-withdraw 100))
+
+;;; Exercise 3.12
+
+(defun nappend (x y)
+  (setf (cdr (last-pair x)) y)
+  x)
+
+(defun last-pair (x)
+  (if (null (cdr x))
+      x
+      (last-pair (cdr x))))
+
+;;; Exercise 3.13
+
+(defun make-cycle (x)
+  (setf (cdr (last-pair x)) x)
+  x)
+
+;;; Exercise 3.14
+
+(defun mystery (x)
+  (labels ((my-loop (x y)
+              (if (null x)
+                  y
+                  (let ((temp (cdr x)))
+                    (setf (cdr x) y)
+                    (my-loop temp x)))))
+    (my-loop x '())))
+
+;;; Exercise 3.16
+
+(defun count-pairs (x)
+  (if (not (consp x))
+      0
+      (+ (count-pairs (car x)) (count-pairs (cdr x)) 1)))
+
+;;; Exercise 3.17
+
+(defun count-pairs2 (x)
+  (let ((counted '()))
+    (labels ((counter (x)
+               (if (or (not (consp x)) (member x counted :test #'eq))
+                   0
+                   (progn
+                     (setf counted (cons x counted))
+                     (+ (counter (car x)) (counter (cdr x)) 1)))))
+      (counter x))))
+
+;;; Exercise 3.18
+
+(defun cycle-detection (x)
+  (let ((visited '()))
+    (labels ((iter (x)
+               (setf visited (cons x visited))
+               (cond ((null (cdr x)) nil)
+                     ((member (cdr x) visited :test #'eq) t)
+                     (t (iter (cdr x))))))
+      (iter x))))
+
+;;; Exercise 3.19
+;;; See Floyd's algorithm for cycle detection, http://en.wikipedia.org/wiki/Cycle_detection
+
+(defun cycle-detection2 (x)
+  (labels ((iter (a b)
+             (cond ((not (consp a)) nil)
+                   ((not (consp b)) nil)
+                   ((eq a b)        t)
+                   ((eq a (cdr b))  t)
+                   (t               (iter (cdr a) (cddr b))))))
+    (iter (cdr x) (cddr x))))
