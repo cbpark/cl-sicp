@@ -171,11 +171,11 @@
 
 (defun mystery (x)
   (labels ((my-loop (x y)
-              (if (null x)
-                  y
-                  (let ((temp (cdr x)))
-                    (setf (cdr x) y)
-                    (my-loop temp x)))))
+             (if (null x)
+                 y
+                 (let ((temp (cdr x)))
+                   (setf (cdr x) y)
+                   (my-loop temp x)))))
     (my-loop x '())))
 
 ;;; Exercise 3.16
@@ -219,3 +219,331 @@
                    ((eq a (cdr b))  t)
                    (t               (iter (cdr a) (cddr b))))))
     (iter (cdr x) (cddr x))))
+
+;;; Exercise 3.21
+;;; See chapter3.lisp
+
+;;; Exercise 3.22
+
+(defun make-queue ()
+  (let ((front-ptr '())
+        (rear-ptr '()))
+    (labels ((empty-queue ()
+               (null front-ptr))
+             (set-front-ptr (item)
+               (setf front-ptr item))
+             (set-rear-ptr (item)
+               (setf rear-ptr item))
+             (front-queue ()
+               (if (empty-queue)
+                   (error "FRONT called with an empty queue")
+                   (car front-ptr)))
+             (insert-queue (item)
+               (let ((new-pair (cons item '())))
+                 (cond ((empty-queue) (set-front-ptr new-pair)
+                        (set-rear-ptr new-pair))
+                       (t             (setf (cdr rear-ptr) new-pair)
+                                      (set-rear-ptr new-pair)))))
+             (delete-queue ()
+               (cond ((empty-queue) (error "DELETE called with an empty queue"))
+                     (t             (set-front-ptr (cdr front-ptr)))))
+             (print-queue ()
+               front-ptr)
+             (dispatch (m)
+               (cond ((eq m 'empty-queue)  #'empty-queue)
+                     ((eq m 'front-queue)  #'front-queue)
+                     ((eq m 'insert-queue) #'insert-queue)
+                     ((eq m 'delete-queue) #'delete-queue)
+                     ((eq m 'print-queue)  #'print-queue)
+                     (t (error "QUEUE: undefined operation ~a" m)))))
+      #'dispatch)))
+
+;;; Exercise 3.23
+
+(defun make-deque ()
+  (cons '() '()))
+
+(defun front-ptr (deque)
+  (car deque))
+
+(defun rear-ptr (deque)
+  (cdr deque))
+
+(defun set-front-ptr (deque item)
+  (setf (car deque) item))
+
+(defun set-rear-ptr (deque item)
+  (setf (cdr deque) item))
+
+(defun empty-deque (deque)
+  (null (front-ptr deque)))
+
+(defun front-deque (deque)
+  (if (empty-deque deque)
+      (error "FRONT called on empty deque ~a" deque)
+      (car (front-ptr deque))))
+
+(defun rear-deque (deque)
+  (if (empty-deque deque)
+      (error "REAR called on empty deque ~a" deque)
+      (car (rear-ptr deque))))
+
+(defun front-insert-deque (deque item)
+  (let ((new-item (list item (front-ptr deque) nil)))
+    (cond ((empty-deque deque)
+           (set-front-ptr deque new-item)
+           (set-rear-ptr deque new-item)
+           nil)
+          (t
+           (setf (caddr (front-ptr deque)) new-item)
+           (set-front-ptr deque new-item)
+           nil))))
+
+(defun rear-insert-deque (deque item)
+  (let ((new-item (list item nil (rear-ptr deque))))
+    (cond ((empty-deque deque)
+           (set-front-ptr deque new-item)
+           (set-rear-ptr deque new-item)
+           nil)
+          (t
+           (setf (cadr (rear-ptr deque)) new-item)
+           (set-rear-ptr deque new-item)
+           nil))))
+
+(defun front-delete-deque (deque)
+  (cond ((empty-deque deque)
+         (error "DELETE called on empty deque ~a" deque))
+        (t
+         (let ((new-front (cadr (front-ptr deque))))
+           (setf (cadr (front-ptr deque)) nil)
+           (setf (caddr (front-ptr deque)) nil)
+           (set-front-ptr deque new-front)
+           (if (null new-front)
+               (set-rear-ptr deque new-front)
+               (setf (caddr new-front) nil))
+           nil))))
+
+(defun rear-delete-deque (deque)
+  (cond ((empty-deque deque)
+         (error "DELETE called on empty deque ~a" deque))
+        (t
+         (let ((new-rear (caddr (rear-ptr deque))))
+           (setf (cadr (rear-ptr deque)) nil)
+           (setf (caddr (rear-ptr deque)) nil)
+           (set-rear-ptr deque new-rear)
+           (if (null new-rear)
+               (set-front-ptr deque new-rear)
+               (setf (cadr new-rear) nil))
+           nil))))
+
+(defun print-deque (deque)
+  (labels ((iter (item)
+             (when (not (null item))
+               (format t "~a " (car item))
+               (iter (cadr item)))))
+    (unless (empty-deque deque)
+      (iter (front-ptr deque)))))
+
+;;; Exercise 3.24
+;;; See chapter3.lisp
+
+;;; Exercise 3.25
+
+(defun make-table (&key (same-key #'eq))
+  (let ((local-table (list '*table*)))
+    (labels ((lookup (keys)
+               (labels ((iter (table keys)
+                          (cond ((null table) nil)
+                                ((null keys) nil)
+                                (t (iter (assoc (car keys) (cdr table)
+                                                :test same-key)
+                                         (cdr keys))))))
+                 (iter local-table keys)))
+             (insert (keys value)
+               (labels ((iter (keys table)
+                          (if (null keys)
+                              (setf (cdr table) value)
+                              (let ((subtable (assoc (car keys) (cdr table)
+                                                     :test same-key)))
+                                (if subtable
+                                    (iter (cdr keys) subtable)
+                                    (append-item keys value table)))))
+                        (append-item (keys value table)
+                          (if (null keys)
+                              (setf (cdr table) value)
+                              (let ((new-record (list (car keys))))
+                                (setf (cdr table) (cons new-record (cdr table)))
+                                (append-item (cdr keys) value new-record)))))
+                 (iter keys local-table))
+               'ok)
+             (dispatch (m)
+               (cond ((eq m 'lookup) #'lookup)
+                     ((eq m 'insert) #'insert)
+                     (t (error "Unknown operation: TABLE ~a" m)))))
+      #'dispatch)))
+
+(defun lookup-table (table keys)
+  (funcall (funcall table 'lookup) keys))
+
+(defun insert-table (table keys value)
+  (funcall (funcall table 'insert) keys value))
+
+;;; Exercise 3.26
+
+(defun make-tree (entry left right)
+  (list entry left right))
+
+(defun make-leaf (entry)
+  (list entry nil nil))
+
+(defun entry (tree)
+  (car tree))
+
+(defun left-branch (tree)
+  (cadr tree))
+
+(defun right-branch (tree)
+  (caddr tree))
+
+(defun set-entry (tree entry)
+  (setf (car tree) entry))
+
+(defun set-left-branch (tree left-branch)
+  (setf (cadr tree) left-branch))
+
+(defun set-right-branch (tree right-branch)
+  (setf (caddr tree) right-branch))
+
+(defun make-record (key data)
+  (list key data))
+
+(defun key (record)
+  (car record))
+
+(defun data (record)
+  (cadr record))
+
+(defun make-table2 (&key (compare #'<))
+  (let ((local-table (cons '*table* nil)))
+    (labels ((tree-root ()
+               (cdr local-table))
+             (set-tree-root (node)
+               (setf (cdr local-table) node))
+             (node-lookup (key node)
+               (if (null node)
+                   nil
+                   (let* ((cur-entry (entry node))
+                          (cur-key (key cur-entry)))
+                     (cond ((funcall compare key cur-key)
+                            (node-lookup key (left-branch node)))
+                           ((funcall compare cur-key key)
+                            (node-lookup key (right-branch node)))
+                           (t
+                            cur-entry)))))
+             (lookup (key)
+               (node-lookup key (cdr local-table)))
+             (node-insert (key data node)
+               (let* ((cur-entry (entry node))
+                      (cur-key (key cur-entry)))
+                 (cond ((funcall compare key cur-key)
+                        (if (null (left-branch node))
+                            (set-left-branch node (make-leaf
+                                                   (make-record key data)))
+                            (node-insert key data (left-branch node))))
+                       ((funcall compare cur-key key)
+                        (if (null (right-branch node))
+                            (set-right-branch node (make-leaf
+                                                    (make-record key data)))
+                            (node-insert key data (right-branch node))))
+                       (t
+                        (set-entry node (make-record key data))))))
+             (insert (key data)
+               (if (null (tree-root))
+                   (set-tree-root (make-leaf (make-record key data)))
+                   (node-insert key data (tree-root))))
+             (dispatch (m)
+               (cond ((eq m 'lookup) #'lookup)
+                     ((eq m 'insert) #'insert)
+                     (t (error "Unknown operation: TABLE ~a" m)))))
+      #'dispatch)))
+
+;;; Exercise 3.28
+;;; See chapter3.lisp
+
+;;; Exercise 3.29
+
+(defun or-gate (a1 a2 output)
+  (let ((x (make-wire))
+        (y (make-wire))
+        (z (make-wire)))
+    (inverter a1 x)
+    (inverter a2 y)
+    (and-gate x y z)
+    (inverter z output)))
+
+;;; Exercise 3.30
+
+(defun ripple-carry-adder (a b s c)
+  (let ((c-in (make-wire)))
+    (if (null (cdr a))
+        (set-signal c-in 0)
+        (ripple-carry-adder (cdr a) (cdr b) (cdr s) c-in))
+    (full-adder (car a) (car b) c-in (car s) c)))
+
+;;; Exercise 3.33
+
+(defun averager (a b average)
+  (let ((sum (make-connector))
+        (two (make-connector)))
+    (adder a b sum)
+    (constant 2 two)
+    (multiplier two average sum)))
+
+;;; Exercise 3.35
+
+(defun squarer (a b)
+  (labels ((process-new-value ()
+             (if (has-value b)
+                 (if (< (get-value b) 0)
+                     (error "square less than 0: SQUARER ~a" (get-value b))
+                     (set-value a (sqrt (get-value b)) #'me))
+                 (when (has-value a)
+                   (set-value b (square (get-value a)) #'me))))
+           (process-forget-value ()
+             (forget-value a #'me)
+             (forget-value b #'me)
+             (process-new-value))
+           (me (request)
+             (cond ((eq request 'I-have-a-value) (process-new-value))
+                   ((eq request 'I-lost-my-value) (process-forget-value))
+                   (t (error "Unknown request: SQUARER ~a" request)))))
+    (connect a #'me)
+    (connect b #'me)
+    #'me))
+
+;;; Exercise 3.37
+
+(defun c+ (x y)
+  (let ((z (make-connector)))
+    (adder x y z)
+    z))
+
+(defun c* (x y)
+  (let ((z (make-connector)))
+    (multiplier x y z)
+    z))
+
+(defun c/ (x y)
+  (let ((z (make-connector)))
+    (multiplier z y x)
+    z))
+
+(defun cv (n)
+  (let ((c (make-connector)))
+    (constant n c)
+    c))
+
+(defun celsius-farenheit-converter (x)
+  (c+ (c* (c/ (cv 9) (cv 5))
+          x)
+      (cv 32)))

@@ -5,6 +5,9 @@
                 :square
                 :fib
                 :primep)
+  (:import-from :cl-sicp.chapter3
+                :get-proc
+                :put-proc)
   (:export :accumulate
            :enumerate-interval
            :enumerate-tree
@@ -33,8 +36,6 @@
            :left-branch-code
            :right-branch-code
            :adjoin-set-code
-           :get-proc
-           :put-proc
            :attach-tag
            :type-tag
            :contents
@@ -602,43 +603,6 @@
 ;;   (make-from-mag-ang-polar r a))
 
 ;;; 2.4.3 Data-Directed Programming and Additivity
-
-(defun make-table (&key (key-cmp #'eq))
-  (let ((local-table (list '*table*)))
-    (labels ((find-key-value (key table)
-               (assoc key table :test key-cmp))
-             (lookup (key-1 key-2)
-               (let ((subtable (find-key-value key-1 (cdr local-table))))
-                 (if subtable
-                     (let ((record (find-key-value key-2 (cdr subtable))))
-                       (if record
-                           (cdr record)
-                           nil))
-                     nil)))
-             (insert (key-1 key-2 value)
-               (let ((subtable (find-key-value key-1 (cdr local-table))))
-                 (if subtable
-                     (let ((record (find-key-value key-2 (cdr subtable))))
-                       (if record
-                           (setf (cdr record) value)
-                           (setf (cdr subtable) (cons (cons key-2 value)
-                                                      (cdr subtable)))))
-                     (setf (cdr local-table) (cons (list key-1 (cons key-2 value))
-                                                   (cdr local-table)))))
-               'ok)
-             (dispatch (m)
-               (cond ((eq m 'lookup-proc) #'lookup)
-                     ((eq m 'insert-proc) #'insert)
-                     (t (error "Unknown operation: TABLE")))))
-      #'dispatch)))
-
-(defparameter *operation-table* (make-table :key-cmp #'equal))
-
-(defun get-proc (op type)
-  (funcall (funcall *operation-table* 'lookup-proc) op type))
-
-(defun put-proc (op type item)
-  (funcall (funcall *operation-table* 'insert-proc) op type item))
 
 (defun install-rectangular-package ()
   ;; internal procedures

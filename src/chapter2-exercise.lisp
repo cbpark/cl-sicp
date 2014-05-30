@@ -3,7 +3,10 @@
   (:use :cl
         :cl-sicp.chapter2)
   (:import-from :cl-sicp.chapter1
-                :square))
+                :square)
+  (:import-from :cl-sicp.chapter3
+                :get-proc
+                :put-proc))
 (in-package :cl-sicp.chapter2-exercise)
 
 ;;; Exercise 2.1

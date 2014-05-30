@@ -14,9 +14,9 @@
                          (:file "chapter1-exercise"
                                 :depends-on ("chapter1"))
                          (:file "chapter2"
-                                :depends-on ("chapter1"))
+                                :depends-on ("chapter1" "chapter3"))
                          (:file "chapter2-exercise"
-                                :depends-on ("chapter1" "chapter2"))
+                                :depends-on ("chapter1" "chapter2" "chapter3"))
                          (:file "chapter3")
                          (:file "chapter3-exercise"
                                 :depends-on ("chapter3")))))
